@@ -10,7 +10,19 @@ h3 {margin-top:1em;font-size: 1.2em; font-weight: bold;}
 
 ol { margin-bottom: 20px}
 
-ol li {list-style-type: decimal;}
+input:checked ~ .switch-paddle {
+    background: #3adb76;
+}
+
+
+
+ol li {list-style-type: decimal; padding-top:20px}
+
+h3::before {
+  content: "";
+  clear: both;
+  display: table;
+}
 
 /*
 ol li li {list-style-type: lower-latin;}
@@ -27,4 +39,13 @@ ol li li li li li li li {list-style-type: lower-latin;}
 .konjunkce {color: green  ! important}
 .disjunkce {color: blue  ! important}
 .rozbal {color: gray ! important; font-size: 60%; display: inline}
-blockquote {color:black; border-left: 10px solid #eee;}
+blockquote {color:black; border-left: 10px solid #eee; padding-right: 0px !important}
+dd {margin-bottom:20px !important}
+.norm-num {background: #fafafa !important;
+    color: black !important;
+vertical-align: top;
+padding: 0.2rem !important;}
+
+@media print {
+  blockquote {border:none;}
+}

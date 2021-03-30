@@ -362,12 +362,61 @@ function Norma(myOznaceni, myObsah) {
     }
 }
 
-function printJSONhypotezy(slozenina,baleni) {
+function addPrepinac(obsah,oznaceni,...mylevel) {
+    if ( (typeof mylevel[0]) == 'undefined' ) bod = "H";
+    else bod = mylevel.join('.');
+    let str = oznaceni+' '+bod;
+    let id = str    .replace("§ ","par")
+                    .replace("odst. ","odst")
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/([.,])\s+/g, '$1')
+                    .replace(/([A-z])\s+([0-9])/g, '$1$2')
+                    .replace(/([0-9])\s+([A-z])/g, '$1$2')
+                    .replace(/[/]/g,"-")
+                    .replace(/[()]/g,"")
+                    .replace(/\s+/g,"-");
+    let ind = (indexofset(obsazene_normy,oznaceni)+1);
+
+
+    return '<div class="float-right" style="width:150px">\
+    <div class="switch tiny" style="display:inline">\
+  <input class="switch-input" id="'+id+'" type="checkbox"\
+  name="'+obsah+'">\
+  <label class="switch-paddle" for="'+id+'">\
+    <span class="show-for-sr">Tiny Sandwiches Enabled</span>\
+  </label>\
+</div> \
+<span class="secondary label norm-num"> \
+N'+ind+"/"+bod+'\
+</span>\
+</div>';
+}
+
+function validityButton(name, value) {
+    let vystup = '<div class="float-right" style="width:150px">';
+
+    switch (value) {
+        case true:
+            vystup += '<button type="button" id="'+name+'" class="success button" style="width:140px"><strong><i class="fi-check"></i> platí</strong></button>';
+            break;
+        default:
+            vystup += '<button type="button" id="'+name+'" class="button" style="width:140px;background:#cacaca"><strong><i class="fi-x"></i> neplatí</strong></button>'
+    }
+
+    vystup += '</div>';
+    return vystup;
+}
+
+
+function printJSONhypotezy(slozenina,baleni,prepinac = false,oznaceni = "" ,...level ) {
+    if ((typeof level[0])=='undefined') level = [];
     // podle zadaného JSONu normy vytiskne hezký výstup v položkovém seznamu
     // balení je logická hodnota true/false, zda se má tisknout rozklik, výchozí hodnota je, že nikoliv
+    // přepínač je zda má být aktivován mód s přepínači
     baleni = baleni || false;
 
-    const rozbal = ' <a href="javascript:void(0)" class="rozbal"><i class="fi-fast-forward"></i></a><span class="explanation"></span></li>';
+//    prepinac = prepinac || false;
 
     if (slozenina.hasOwnProperty('konjunkce') || slozenina.hasOwnProperty('disjunkce') ) {
         let pole = slozenina[Object.keys(slozenina)[0]];
@@ -376,17 +425,30 @@ function printJSONhypotezy(slozenina,baleni) {
 
         vystup += "\n<ol>";
 
-        pole.forEach( el => {
+        level.push(0);
+
+        pole.forEach( (el,i) => {
+
                 vystup+= "\n<li>";
+                incrementLastEl(level);
+
                 switch (typeof(el)) {
                     case 'string':
                         vystup+= el;
-
                         if (baleni === true) vystup+= rozbal;
+                        if (prepinac === true) {
+
+                            vystup+= addPrepinac(el,oznaceni,...level);
+
+                            console.log(level);
+                            console.log(el);
+                        }
 
                         break;
                     default:
-                        vystup+=printJSONhypotezy(el,baleni);
+                        //incrementLastEl(level);
+
+                        vystup+=printJSONhypotezy(el,baleni,prepinac,oznaceni, ...level);
                 };
                 vystup+= "</li>\n ";
             });
@@ -403,9 +465,11 @@ function printJSONhypotezy(slozenina,baleni) {
             case 'string':
                 vystup+= part;
                 if (baleni === true) vystup+= rozbal;
+                if (prepinac === true) vystup+= addPrepinac(part,oznaceni,...level);
                 break;
             default:
-                vystup+=printJSONhypotezy(part,baleni);
+                // level.push(0);
+                vystup+=printJSONhypotezy(part,baleni,prepinac,oznaceni,...level);
         };
         return vystup + "</blockquote>";
         }
@@ -415,19 +479,29 @@ function printJSONhypotezy(slozenina,baleni) {
         let pole = slozenina['komplex'];
         if (! Array.isArray(pole)) console.error("Chyba ve formátování vstupního objektu. Objekt není typu Pole.");
 
-        let vystup = pole[0]["vzorec"]["dispozice"] + "<blockquote>";
+        let vystup = pole[0]["vzorec"]["dispozice"];
+        if (prepinac === true) vystup+= addPrepinac(vystup,oznaceni,...level);
+
+        vystup+= "<blockquote>";
 
         // prvky tohoto pole jsou další normativní komplexy
         pole.forEach( el => {
             if (el.constructor.name != 'NormativeComplex')                console.error("Nastala chyba, prvky komplexu nejsou typu NormativeComplex.");
-            vystup+= el.printObsah(true);
+            if (prepinac) {
+                vystup+= el.printPrepinac(true);}
+            else vystup+= el.printObsah(true);
             });
 
         return vystup + "</blockquote>";
         }
 
-    else return slozenina;
+    else
+    {
+        let vystup = "";
+        if (prepinac === true) vystup+= addPrepinac(slozenina,oznaceni,...level);
+        return slozenina+vystup;
 
+}
     // { "konjunkce": [ "V1", { "disjunkce": [ "V2", "V3" ] }, "V4", { "disjunkce": [ "V5", "V6" ] } ] }
 }
 
@@ -512,7 +586,7 @@ function childrenOfDispozice(testovanaDispozice) {
 }
 
 function joinAntecedents(pole, dispozice){
-    // funkce dostává pole se seznamem norem a dispozicí a vrací normu vzniklou souborem všech podmínek
+    // funkce dostává pole se seznamem norem a dispozicí a vrací normu vzniklou souborem všech podmínek; pokud se používá ve spojení s childrenOfDispozice, je třeba pamatovat na to, že prezentace výsledku jako alternativy není informačně ekvivalentní, ale jde pouze implikace; proto je vhodnější to řešit přes komplexy
 
     podminky = [];
     pole.forEach(el => {
@@ -703,15 +777,31 @@ function simplifyNorm(normainput) {
 
     // console.log(zjednodusena);
 
-    let zjednodusena.oznaceni = normainput.oznaceni + " (zjednodušný tvar)";
-    
-
-/*
     normaoutput = new Norma(normainput.oznaceni + " (základní tvar)",
                 vzorec2text(zjednodusena) + " => " + normainput.vzorec.dispozice);
-*/
     return normaoutput;
 }
+
+function simplifyNC(normain) {
+    /* dostanu zadaný normativní komplex a vrátím ho po provedení formálního zjednodušení, tj. v rámci jeho hlavní struktury budou provedeny potřebné substituce, nicméně toto se již nebude propisovat dovnitř */
+
+    if ( (normain instanceof Norma) == true || (normain instanceof NormativeComplex) == true )  { // vstupem je norma
+
+        let slozenina = normain.vzorec.hypoteza;
+
+        let zjednodusena =logicalSimplifyOperation(logicalSimplifyOperation(logicalSimplifyNegation(slozenina), "konjunkce"), "disjunkce");
+
+        normaoutput = new NormativeComplex(normain.oznaceni, zjednodusena, normain.vzorec.dispozice, normain.vzorec.ekvivalence);
+
+        return normaoutput;
+
+
+    }
+
+    else console.error("Zadaný vstup není normou");
+
+}
+
 
 function traceHypothesis(dispozice) {
     // funkci zadáme dispozici a vrací dohledanou hypotézu
@@ -748,7 +838,46 @@ function aktualizujOdkazy() {
     }
 }
 
+function infoBox(text) {
+    return '<div data-alert class="callout info>"><p><i class="fi-info"></i> '+text+'</p></div>';
+}
 
+function normView(norma5, long = false, prepinac = false) {
+    let output="";
+    output += '<div data-alert class="callout info>"><h2>Zadaná dispozice</h2><p><strong>'+norma5.vzorec.dispozice+'</strong></p></div>';
+
+    normaprop2 = complexifyNorm(norma5);
+    normaprop3 = reduceNorm(normaprop2);
+
+    if (long) {
+        output += "<h2>Vstupní podoba</h2>";
+        output += infoBox('<strong>Vstupní podobou</strong> máme na mysli výpis předpokladů s daným následkem v souboru všech norem v systému');
+
+        output += normaprop2.printObsah();
+        console.log(normaprop2);
+
+        console.log("předěl!")
+
+        output += "<hr/><h2>Pokrácená podoba</h2>";
+        output += infoBox("<strong>Pokrácenou podobou</strong> máme na mysli, že se v normativním komplexu nahradí všechny dispozice spojené jednoduchými ekvivalencemi s navazující normou přímo hypotézou této navazující normy, čímž se celá norma zjednoduší.");
+
+        //console.log(normaprop3);
+        console.log(normaprop3);
+        customLog("vstup",normaprop3);
+
+        output += normaprop3.printObsah();
+    }
+    output += "<hr/><h2>Zjednodušená podoba</h2>";
+    output += infoBox("<strong>Zjednodušenou podobou</strong> máme na mysli, že se všechny negace převedou na atomární členy výrazu a pospojují se případné výčty konjunkcí a disjunkcí.");
+
+
+    normaprop4 = simplifyNC(normaprop3);
+
+    if (prepinac) output += normaprop4.printPrepinac();
+    else output += normaprop4.printObsah();
+
+    return output;
+}
 
 function addMySelect() {
 
@@ -770,13 +899,16 @@ function addMySelect() {
 
         if (dispozice != "") {
 
-            norma = joinAntecedents(childrenOfDispozice(dispozice), dispozice);
-            normaprop = simplifyNorm(norma);
-            obrazovka2.innerHTML = norma.printObsah();
+            // norma = joinAntecedents(childrenOfDispozice(dispozice), dispozice);
+            // normaprop = simplifyNorm(norma);
 
-            obrazovka2.innerHTML += "<hr/>";
+            let norma = new Norma("Vybraná dispozice", dispozice+ ' <=> ' +dispozice);
 
-            obrazovka2.innerHTML += normaprop.printObsah();
+            /*let cnorm = complexifyNorm(norma);
+            console.log(cnorm); */
+
+            obrazovka2.innerHTML = normView(norma, true);
+
             aktualizujOdkazy();
 
         }
@@ -798,7 +930,7 @@ function addMySelect() {
 }
 
 function handleHash() {
-    let mypages = ["home","baze", "cil", "brouzdani", "komplexy"];
+    let mypages = ["home","baze", "cil", "brouzdani", "komplexy", "evaluate"];
     let mypage = location.hash.substr(1);
     if (mypages.includes(mypage)) {
         show_page(mypage);
@@ -820,6 +952,20 @@ document.addEventListener("DOMContentLoaded", function(e) {
         handleHash();
         aktualizujOdkazy();
         });
+
+    let list = document.getElementsByClassName("switch-input");
+
+    /* synchronizace přepínačů se stejným ID na stránce evaluate */
+    for (let item of list) {
+
+        item.addEventListener('input', (event) => {
+                let jmenovci = document.getElementsByName(event.currentTarget.name);
+                for (let jmenovec of jmenovci) {
+                    jmenovec.checked = event.currentTarget.checked;
+                }
+            });
+
+    }
 
     let tog = document.getElementById("toggle-rozbal");
     tog.addEventListener("click", function() {
@@ -868,6 +1014,32 @@ function NormativeComplex(myoznaceni, myhypoteza, mydispozice, myekvivalence) {
         vystup+="\n";
         return vystup;
     }
+
+    this.printPrepinac = function(komplex) {
+        komplex=komplex || false;
+        let znak = "";
+        if (komplex) {
+            if (this.vzorec.ekvivalence) znak = "⇕";
+            else znak = "⇑";
+        }
+
+        obsazene_normy.add(this.oznaceni);
+        console.log(obsazene_normy);
+
+        let ind = (indexofset(obsazene_normy,this.oznaceni)+1);
+
+        var vystup = "<h3>"+znak+" "+this.oznaceni+" (dále jen „N"+ind+"“)</h3>"+validityButton("N"+ind, false)+"\n\n";
+
+
+
+        vystup+=naveti(this.vzorec);
+        if (this.vzorec.hypoteza != null ) {
+            vystup+= printJSONhypotezy(this.vzorec.hypoteza,false,true,this.oznaceni) ;
+        }
+        else vystup+='.</div>';
+        vystup+="\n";
+        return vystup;
+    }
 }
 
 function printObj(obj) {
@@ -894,6 +1066,8 @@ function myLog(text, obj) {
 
 const seznam_povolenych_operaci = ["negace", "konjunkce", "disjunkce", "komplex"];
 const seznam_narnich_operaci = ["konjunkce", "disjunkce"];
+
+const rozbal = ' <a href="javascript:void(0)" class="rozbal"><i class="fi-fast-forward"></i></a><span class="explanation"></span></li>';
 
 function complexifyNorm(normainput) {
     // funkci zadáme Normu, např. .vzorec.hypoteza = { konjunkce: A, B}, přičemž
@@ -1049,3 +1223,28 @@ function reduceNorm(normain) {
 
 // TODO:
 // 1. Nefunguje zjednodušovací operace, která se rozsype na uzávorkování. Otázka je, zda je opravdu dělaná na normativní komplexy.
+
+function incrementLastEl (_array) {
+   _array[_array.length - 1]++;
+}
+
+const obsazene_normy = new Set();
+
+function prehled_obsazenych_norem() {
+    let i=0;
+    let vystup = "<h2>Přehled obsažených normativních zdrojů</h2><dl>";
+    obsazene_normy.forEach( el => {
+        i++;
+        vystup += "<dt>N"+i+"</dt> <dd>"+el+"</dd>";
+    }
+
+    );
+    return vystup+"</dl>";
+}
+
+function indexofset(myset, member) {
+    let arr = Array.from(myset);
+    return arr.indexOf(member);
+}
+
+/* credit https://stackoverflow.com/questions/28790584/javascript-increment-last-array-element */

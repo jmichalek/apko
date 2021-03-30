@@ -12,7 +12,6 @@ let seznam_dispozic = [
     "informace je osobním údajem",
     "pro informaci je stanovena výjimka týkající se příjemců veřejných prostředků",
     "pro informaci je stanovena výjimka týkající se veřejně činných osob",
-    "Něco se stane",
 ];
 
 let ustanoveni = {
@@ -54,7 +53,7 @@ var norma9 = new Norma("§ 8b odst. 2 InfZ",
     "informace se týká jen poskytování veřejných prostředků podle zákonů v oblasti sociální, poskytování zdravotních služeb, hmotného zabezpečení v nezaměstnanosti, státní podpory stavebního spoření nebo státní pomoci při obnově území => na informaci se výjimka týkající se příjemců veřejných prostředků nevztahuje");
 
 var norma10 = new Norma("§ 8b odst. 3 InfZ",
-    "informace je jménem, příjmením, rokem narození, obcí, kde má fyzická osoba trvalý pobyt nebo výše, účel či podmínka poskytnutých veřejných prostředků fyzické osobě => informace je základním osobním údajem o osobě");
+    "informace je jménem, příjmením, rokem narození, obcí, kde má fyzická osoba trvalý pobyt nebo výše, účel či podmínka poskytnutých veřejných prostředků fyzické osobě <=> informace je základním osobním údajem o osobě");
 
 var norma11 = new Norma("§ 2 ZFK písm. g)",
     "povinný subjekt poskytl příjemci veřejné finance, věci, majetková práva nebo jinou majetkovou hodnotu & majetková hodnota patřila před poskytnutím státu nebo jiné právnické osobě, která je orgánem veřejné správy ve smyslu zákona o finanční kontrole <=> povinný subjekt poskytl příjemci veřejné prostředky");
@@ -70,12 +69,9 @@ var norma14 = new Norma("Platový nález/III. (bod 33 nálezu Ústavního soudu 
 var norma15 = new Norma("§ 8a odst. 2 InfZ",
     "informace je osobním údajem & subjektem údajů je veřejně činná osoba, funkcionář nebo zaměstnanec veřejné správy & osobní údaj vypovídá o veřejné nebo úřední činnosti nebo o funkčním nebo pracovním zařazení subjektu údajů <=> pro informaci je stanovena výjimka týkající se veřejně činných osob");
 
-    var norma15 = new Norma("§ 12 InfZ",
+var norma16 = new Norma("§ 12 InfZ",
         "NOT(zákon se poskytování informace nevztahuje) & informace se vztahuje k působnosti povinného subjektu & NOT (povinnost poskytovat informace se informace netýká) & NOT(povinný subjekt informaci neposkytne) & (povinný subjekt má úplnou povinnost poskytovat informace | je dána částečná informační povinnost povinného subjektu ve vztahu k informaci) & (NOT(povinný subjekt informaci může odepřít) | (povinný subjekt informaci může odepřít & na odepření informace je legitimní zájem s ohledem na čl. 17 Listiny práv a svobod & nutnost ochrany informace s ohledem na legitimní zájem s ohledem na konkrétní okolnosti převažuje nad právem na informace )) <=> jsou dány hmotněprávní důvody poskytnutí informace povinným subjektem");
 
-
-var normatest = new Norma("XYZ",
-        "V1 & V2 & (V3 & V4) => Něco se stane");
 
 
 /* STRÁNKY */
@@ -106,29 +102,7 @@ function show_page(mypage) {
 
         //  obrazovka.innerHTML += normaprop.printObsah();
 
-          normaprop2 = complexifyNorm(norma5);
-          obrazovka.innerHTML += normaprop2.printObsah();
-          console.log(normaprop2);
-
-          console.log("předěl!")
-
-          obrazovka.innerHTML += "<hr/><h2>Pokrácená podoba</h2>";
-          obrazovka.innerHTML += "<p><strong>Pokrácenou podobou</strong> máme na mysli, že se v normativním komplexu nahradí všechny dispozice spojené jednoduchými ekvivalencemi s navazující normou přímo hypotézou této navazující normy, čímž se celá norma zjednoduší."
-
-          normaprop3 = reduceNorm(normaprop2);
-          //console.log(normaprop3);
-          console.log(normaprop3);
-          customLog("vstup",normaprop3);
-
-          obrazovka.innerHTML += normaprop3.printObsah();
-
-          obrazovka.innerHTML += "<hr/><h2>Zjednodušená podoba</h2>";
-          obrazovka.innerHTML += "<p><strong>Zjednodušenou podobou</strong> máme na mysli, že se všechny negace převedou na atomární členy výrazu a pospojují se případné výčty konjunkcí a disjunkcí."
-
-
-          normaprop4 = simplifyNorm(normaprop3);
-          obrazovka.innerHTML += normaprop4.printObsah();
-
+          obrazovka.innerHTML += normView(norma5);
           break;
 
       case "cil":
@@ -151,16 +125,24 @@ function show_page(mypage) {
           normaprop = simplifyNorm(norma);
 
 
-          normaneg = simplifyNorm(normatest);
-
           // console.log(vzorec2text(podminky.vzorec.hypoteza));
           obrazovka.innerHTML += norma.printObsah();
           obrazovka.innerHTML += normaprop.printObsah();
-          obrazovka.innerHTML += normatest.printObsah();
-          obrazovka.innerHTML += normaneg.printObsah();
 
-      break;
+          break;
 
+      case "evaluate":
+          obrazovka.innerHTML = "<h1>Vyhodnocení realizace hypotézy normy</h1>";
+
+            // normaprop = complexifyNorm(norma5);
+
+            //  obrazovka.innerHTML += normaprop.printObsah();
+
+          obrazovka.innerHTML += normView(norma5, false, true);
+
+          obrazovka.innerHTML += prehled_obsazenych_norem();
+
+          break;
 
       default:
        obrazovka.innerHTML =  puvodni_obrazovka;

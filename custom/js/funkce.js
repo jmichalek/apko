@@ -362,10 +362,15 @@ function Norma(myOznaceni, myObsah) {
     }
 }
 
-function addPrepinac(obsah,oznaceni,...mylevel) {
+function normID(ind,...mylevel) {
     if ( (typeof mylevel[0]) == 'undefined' ) bod = "H";
     else bod = mylevel.join('.');
-    let str = oznaceni+' '+bod;
+    return 'N'+ind+"/"+bod;
+}
+
+function addPrepinac(obsah,oznaceni,...mylevel) {
+
+    /*
     let id = str    .replace("§ ","par")
                     .replace("odst. ","odst")
                     .normalize("NFD")
@@ -376,19 +381,20 @@ function addPrepinac(obsah,oznaceni,...mylevel) {
                     .replace(/[/]/g,"-")
                     .replace(/[()]/g,"")
                     .replace(/\s+/g,"-");
+                    */
     let ind = (indexofset(obsazene_normy,oznaceni)+1);
-
+    nid = normID(ind,...mylevel);
 
     return '<div class="float-right" style="width:150px">\
     <div class="switch tiny" style="display:inline">\
-  <input class="switch-input" id="'+id+'" type="checkbox"\
+  <input class="switch-input" id="'+nid.replace(/[/]/g,"-")+'" type="checkbox"\
   name="'+obsah+'">\
-  <label class="switch-paddle" for="'+id+'">\
+  <label class="switch-paddle" for="'+nid.replace(/[/]/g,"-")+'">\
     <span class="show-for-sr">Tiny Sandwiches Enabled</span>\
   </label>\
 </div> \
 <span class="secondary label norm-num"> \
-N'+ind+"/"+bod+'\
+'+nid+'\
 </span>\
 </div>';
 }
@@ -398,14 +404,30 @@ function validityButton(name, value) {
 
     switch (value) {
         case true:
-            vystup += '<button type="button" id="'+name+'" class="success button" style="width:140px"><strong><i class="fi-check"></i> platí</strong></button>';
+            vystup += '<button type="button" id="B'+name+'" class="success button" style="width:140px"><strong><i class="fi-check"></i> platí</strong></button>';
             break;
         default:
-            vystup += '<button type="button" id="'+name+'" class="button" style="width:140px;background:#cacaca"><strong><i class="fi-x"></i> neplatí</strong></button>'
+            vystup += '<button type="button" id="B'+name+'" class="button" style="width:140px"><strong><i class="fi-x"></i> neplatí</strong></button>'
     }
 
     vystup += '</div>';
     return vystup;
+}
+
+function toggleButton(button) {
+    // toggle the status of the button;
+    let hodnota_button = false;
+    if (button.classList.contains("success")) hodnota_button=true;
+
+    switch (hodnota_button) {
+        case true:
+            button.classList.remove("success");
+            button.innerHTML = '<strong><i class="fi-x"></i> neplatí</strong>';
+            break;
+        default:
+            button.classList.add("success");
+            button.innerHTML = '<strong><i class="fi-check"></i> platí</strong>';
+    }
 }
 
 
@@ -416,7 +438,7 @@ function printJSONhypotezy(slozenina,baleni,prepinac = false,oznaceni = "" ,...l
     // přepínač je zda má být aktivován mód s přepínači
     baleni = baleni || false;
 
-//    prepinac = prepinac || false;
+    //    prepinac = prepinac || false;
 
     if (slozenina.hasOwnProperty('konjunkce') || slozenina.hasOwnProperty('disjunkce') ) {
         let pole = slozenina[Object.keys(slozenina)[0]];
@@ -440,8 +462,8 @@ function printJSONhypotezy(slozenina,baleni,prepinac = false,oznaceni = "" ,...l
 
                             vystup+= addPrepinac(el,oznaceni,...level);
 
-                            console.log(level);
-                            console.log(el);
+                            //console.log(level);
+                            //console.log(el);
                         }
 
                         break;
@@ -501,9 +523,10 @@ function printJSONhypotezy(slozenina,baleni,prepinac = false,oznaceni = "" ,...l
         if (prepinac === true) vystup+= addPrepinac(slozenina,oznaceni,...level);
         return slozenina+vystup;
 
-}
+    }
     // { "konjunkce": [ "V1", { "disjunkce": [ "V2", "V3" ] }, "V4", { "disjunkce": [ "V5", "V6" ] } ] }
 }
+
 
 function vzorec2text(slozenina) {
     // podle zadaného JSONu podmínek vytiskne standardizovaný textový výstup
@@ -829,6 +852,7 @@ function addListenerRozklik(el) {
 }
 
 
+
 function aktualizujOdkazy() {
     var elements = obrazovka.getElementsByTagName('a');
     // console.log(elements);
@@ -938,7 +962,6 @@ function handleHash() {
 }
 
 
-
 /* Nasouchače událostem pro celý dokument */
 
 document.addEventListener("DOMContentLoaded", function(e) {
@@ -959,12 +982,12 @@ document.addEventListener("DOMContentLoaded", function(e) {
     for (let item of list) {
 
         item.addEventListener('input', (event) => {
+                // přepneme tlačítka se stejným názvem
                 let jmenovci = document.getElementsByName(event.currentTarget.name);
                 for (let jmenovec of jmenovci) {
                     jmenovec.checked = event.currentTarget.checked;
-                }
+                    }
             });
-
     }
 
     let tog = document.getElementById("toggle-rozbal");
@@ -994,7 +1017,7 @@ function NormativeComplex(myoznaceni, myhypoteza, mydispozice, myekvivalence) {
     this.oznaceni = myoznaceni;
     // console.log(this.obsah);
     this.vzorec = {"hypoteza": myhypoteza, "dispozice": mydispozice, "ekvivalence": myekvivalence};
-    myLog("výstup",this.vzorec);
+    //myLog("výstup",this.vzorec);
 
 
     this.printObsah = function(komplex) {
@@ -1040,6 +1063,12 @@ function NormativeComplex(myoznaceni, myhypoteza, mydispozice, myekvivalence) {
         vystup+="\n";
         return vystup;
     }
+
+    /*
+    this.normObject = normObject;
+         vrací objekt, kde v logické grafové struktuře jsou dotazy */
+
+
 }
 
 function printObj(obj) {
@@ -1061,7 +1090,7 @@ function myLog(text, obj) {
             break;
         }
 
-    /*console.log("%c"+text.toUpperCase()+": \n" + JSON.stringify(obj, null, 2).replace(/[}{"\[\],]/g,"").replace(/\n+/g,"\n"),"color:"+color+";");*/
+    console.log("%c"+text.toUpperCase()+": \n" + JSON.stringify(obj, null, 2).replace(/[}{"\[\],]/g,"").replace(/\n+/g,"\n"),"color:"+color+";");
 }
 
 const seznam_povolenych_operaci = ["negace", "konjunkce", "disjunkce", "komplex"];
@@ -1073,18 +1102,18 @@ function complexifyNorm(normainput) {
     // funkci zadáme Normu, např. .vzorec.hypoteza = { konjunkce: A, B}, přičemž
     // funkce provede pro všechny prvky substituci A -> {komplex: -hypoteza: A -normy: - X, Y}, přičemž X, Y jsou Normy, které mají danou hypotézu jako konsekvent; výslednou strukturu nazýváme řetězec vyplývání; toto provádí tak dlouho, dokud nejsou všechny normy nahrazeny komplexem, pokud to lze; nicméně každá norma, která se vyskytuje jako hypotéza v komplexu se rozvine pouze jednou a na dalších místech se již na komplex nerozvádí, aby nebyly ve struktuře zbyduplicity; funkci můžeme také zadat složeninu (hypotézu)
 
-    myLog("vstup",normainput);
+    // myLog("vstup",normainput);
 
     if ( (normainput instanceof Norma) == true || (normainput instanceof NormativeComplex) == true ) // vstupem je norma
     {
-        console.log("Vstupem je norma, typ "+normainput.constructor.name+".");
+        // console.log("Vstupem je norma, typ "+normainput.constructor.name+".");
         // pokud je vstupem norma, vrátíme tutéž normu s upravenou hypotézou
         let normaoutput = new NormativeComplex(normainput.oznaceni, complexifyNorm(normainput.vzorec.hypoteza), normainput.vzorec.dispozice, normainput.vzorec.ekvivalence);
-        myLog("výstup",normaoutput);
+        // myLog("výstup",normaoutput);
         return normaoutput;
     }
     else { // vstupem je složenina
-        console.log("Vstupem je složenina.");
+        //console.log("Vstupem je složenina.");
         let hypoteza = normainput;
 
         // nyní mohou nastat 2 případy: 1. hypoteza je prostý text, 2. hypotéza je složenina (v první úrovni konjunkce, disjunkce, negace)
@@ -1097,12 +1126,12 @@ function complexifyNorm(normainput) {
         // nejprve se otestuje, zda v systému vůbec máme nějaké normy, jichž je hypotéza konsekventem
 
             let deti = childrenOfDispozice(hypoteza);
-            console.log(deti);
-            console.log(deti.length);
+            //console.log(deti);
+            //console.log(deti.length);
 
             if ( deti.length == 0 )
             {
-                myLog("výstup",hypoteza);
+                // myLog("výstup",hypoteza);
                 return hypoteza;
             }
 
@@ -1110,7 +1139,7 @@ function complexifyNorm(normainput) {
                 let vysledek = {};
                 //myLog("výstup",deti);
                 vysledek.komplex = deti.map( x => complexifyNorm(x));
-                myLog("výstup",vysledek);
+                //myLog("výstup",vysledek);
                 return vysledek;
             }
         }
@@ -1119,7 +1148,7 @@ function complexifyNorm(normainput) {
 
             let child = hypoteza[operace];
 
-            myLog("dítě",child);
+            //myLog("dítě",child);
 
             if (seznam_narnich_operaci.includes(operace) ) {
 
@@ -1130,13 +1159,13 @@ function complexifyNorm(normainput) {
 
                 let vysledek = {};
                 vysledek[operace] = child.map( x => complexifyNorm(x) );
-                myLog("výstup",vysledek);
+                //myLog("výstup",vysledek);
                 return vysledek;
             }
             else if (operace == "negace") {
                 let vysledek = {};
                 vysledek[operace] = complexifyNorm(child) ;
-                myLog("výstup",vysledek);
+                //myLog("výstup",vysledek);
                 return vysledek;
             }
         }
@@ -1172,11 +1201,11 @@ function reduceNorm(normain) {
     // 3. je to vnořený komplex - pak provedeme redukci
     // 4. je to literál (string)
 
-    console.log(normain);
+    //console.log(normain);
 
     // ad 1.
     if ( (normain instanceof NormativeComplex) == true ) {
-        console.log("PRAVDA");
+        //console.log("PRAVDA");
         let normaout = new NormativeComplex(normain.oznaceni,
                             reduceNorm(normain.vzorec.hypoteza),
                             normain.vzorec.dispozice,
@@ -1220,10 +1249,6 @@ function reduceNorm(normain) {
 
 }
 
-
-// TODO:
-// 1. Nefunguje zjednodušovací operace, která se rozsype na uzávorkování. Otázka je, zda je opravdu dělaná na normativní komplexy.
-
 function incrementLastEl (_array) {
    _array[_array.length - 1]++;
 }
@@ -1248,3 +1273,111 @@ function indexofset(myset, member) {
 }
 
 /* credit https://stackoverflow.com/questions/28790584/javascript-increment-last-array-element */
+
+
+
+function rozpadNCdopromennych(normain,ind,...level ) {
+    if ((typeof level[0])=='undefined') level = [];
+
+    var operace2 = isSlozenina(normain);
+
+    if ( operace2 != false ) {
+        let vysledek = {};
+        let children = normain[operace2];
+        if (seznam_narnich_operaci.includes(operace2)) {
+            level.push(0);
+            let vystup = [];
+            children.forEach( child => {
+                //myLog("vstup",operace2);
+
+                incrementLastEl(level);
+                vystup.push(rozpadNCdopromennych(child,ind,...level));
+                });
+
+            vysledek[operace2] = vystup;
+            }
+        else if (operace2 == 'negace') {
+            vysledek[operace2] = rozpadNCdopromennych(children,ind,...level);
+            }
+        //myLog("vstup", normain);
+        //myLog("výstup",vysledek);
+
+        return vysledek;
+    }
+
+    else if ( normain.hasOwnProperty('komplex') ) {
+        // pp.: tabulka evaluovaných vazeb, která svazuje hypotézu konsekventní normy a příslušnou výslednou logickou hodnotu evaluované antecendentní normy
+        //   N1.3   N2
+
+        let children = normain['komplex'];
+
+        children.forEach( child =>  {
+            let ind2 = (indexofset(obsazene_normy,child.oznaceni)+1);
+            tabulka_vazeb.push([normID(ind,...level),ind2]);
+        });
+
+        return rozpadNCdopromennych("dummy",ind,...level);
+    }
+
+    else if ( (typeof normain) == 'string') {
+        let vystup = normID(ind,...level);
+        //myLog("vstup", normain);
+        //myLog("výstup",vystup);
+
+        return vystup;
+    }
+
+    else {
+        //myLog("výstup", "PROBLEM");
+        //myLog("výstup", normain);
+        return false;}
+}
+
+var tabulka_vazeb = [];
+
+function vzorecEvaluateNorm(vzorec) {
+    vzorec = vzorec.replace(/(N\d+\-(H|(\d\.)*(\d)))/g, 'document.getElementById("$1").checked');
+    return vzorec;
+}
+
+function formLogic(normain) {
+    // na zadaném normativním komplexu vytvoří řetězce s logickými objekty, které lze vyhodnotit pomocí funkcí eval; výstupem je tedy tabulka evaluovaných výrazů
+    // N1   řetězec k evaluaci
+    // N2   řetězec k evaluaci
+    // a dále tabulka evaluovaných vazeb, která svazuje hypotézu konsekventní normy a příslušnou výslednou logickou hodnotu evaluované antecendentní normy
+    //   N1.3   N2
+
+    if ( (normain instanceof NormativeComplex) == true ) {
+
+        // najdeme číslo normy
+        let ind = (indexofset(obsazene_normy,normain.oznaceni)+1);
+
+        // vytvoříme objekt - vlastně stejně jako print, akorát komplexy uložíme vazbu a zapomeneme a provedeme substituci
+        let logickyObjekt = rozpadNCdopromennych(normain.vzorec.hypoteza, ind);
+        myLog("výstup", logickyObjekt);
+        let vzorec = vzorec2text(logickyObjekt);
+        vzorec = vzorec.replace(/([&|])/g,' $1$1 ').replace(/[/]/g,'-').replace(/NOT/g,' !').replace(/\s+/g,' ');
+        vzorec = vzorecEvaluateNorm(vzorec);
+
+        let list = document.getElementsByClassName("switch-input");
+
+        /* synchronizace přepínačů se stejným ID na stránce evaluate */
+
+        for (let item of list) {
+
+            item.addEventListener('input', (event) => {
+                    // aktualizujeme logickou hodnotu buttonku
+                    let button = document.getElementById("BN"+ind);
+                    let hodnota_chain = eval(vzorec);
+
+                    let hodnota_button = false;
+                    if (button.classList.contains("success")) hodnota_button=true;
+
+                    if (hodnota_button!=hodnota_chain) {
+                        toggleButton(button);
+                        }
+                    });
+        }
+    }
+    else console.error("Vstup není normativní komplex.");
+}

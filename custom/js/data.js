@@ -142,6 +142,11 @@ function show_page(mypage) {
 
           obrazovka.innerHTML += prehled_obsazenych_norem();
 
+          let normaprop2 = complexifyNorm(norma5);
+          let normaprop3 = reduceNorm(normaprop2);
+          let normaprop4 = simplifyNC(normaprop3);
+          console.log(formLogic(normaprop4));
+
           break;
 
       default:

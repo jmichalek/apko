@@ -382,12 +382,12 @@ function addPrepinac(obsah,oznaceni,...mylevel) {
                     .replace(/[()]/g,"")
                     .replace(/\s+/g,"-");
                     */
-    let ind = (indexofset(obsazene_normy,oznaceni)+1);
+    let ind = (indexofset(obsazene_normy,'oznaceni',oznaceni)+1);
     nid = normID(ind,...mylevel);
 
     return '<div class="float-right" style="width:150px">\
     <div class="switch tiny" style="display:inline">\
-  <input class="switch-input" id="'+nid.replace(/[/]/g,"-")+'" type="checkbox"\
+  <input class="switch-input '+nid.replace(/(N\d+)[/].*/g,'$1')+'" id="'+nid.replace(/[/]/g,"-")+'" type="checkbox"\
   name="'+obsah+'">\
   <label class="switch-paddle" for="'+nid.replace(/[/]/g,"-")+'">\
     <span class="show-for-sr">Tiny Sandwiches Enabled</span>\
@@ -658,6 +658,12 @@ function propagateNegation(tvar) {
         else if (child.hasOwnProperty("negace")) {
             return child["negace"]; // dvakrát negace je identita
         }
+        else if (child.hasOwnProperty("komplex")) {
+            let pole = child["komplex"];
+            return {negace:
+                        {komplex: pole.map( x => logicalSimplifyNegation(x))}};
+            // propsání do komplexu
+        }
         else return {negace: child};
     }
     else return tvar;
@@ -737,7 +743,12 @@ function logicalSimplifyNegation(slozenina) {
         return vysledek;
 
     }
+    else if ( slozenina.hasOwnProperty('komplex')) {
+        let vysledek = {};
+        vysledek.komplex = logicalSimplifyNegation(slozenina.komplex);
+        return vysledek;
 
+    }
     else return slozenina;
 
 
@@ -866,11 +877,11 @@ function infoBox(text) {
     return '<div data-alert class="callout info>"><p><i class="fi-info"></i> '+text+'</p></div>';
 }
 
-function normView(norma5, long = false, prepinac = false) {
+function normView(normin, long = false, prepinac = false) {
     let output="";
-    output += '<div data-alert class="callout info>"><h2>Zadaná dispozice</h2><p><strong>'+norma5.vzorec.dispozice+'</strong></p></div>';
+    output += '<div data-alert class="callout info>"><h2>Zadaná dispozice</h2><p><strong>'+normin.vzorec.dispozice+'</strong></p></div>';
 
-    normaprop2 = complexifyNorm(norma5);
+    normaprop2 = complexifyNorm(normin);
     normaprop3 = reduceNorm(normaprop2);
 
     if (long) {
@@ -954,13 +965,28 @@ function addMySelect() {
 }
 
 function handleHash() {
-    let mypages = ["home","baze", "cil", "brouzdani", "komplexy", "evaluate"];
+    let mypages = ["home","vstupy", "baze", "cil", "brouzdani", "komplexy", "evaluate"];
     let mypage = location.hash.substr(1);
     if (mypages.includes(mypage)) {
         show_page(mypage);
     }
 }
 
+function aktualizujSpojenePojizdniky() {
+    let list = document.getElementsByClassName("switch-input");
+
+    /* synchronizace přepínačů se stejným ID na stránce evaluate */
+    for (let item of list) {
+
+        item.addEventListener('input', (event) => {
+                // přepneme tlačítka se stejným názvem
+                let jmenovci = document.getElementsByName(event.currentTarget.name);
+                for (let jmenovec of jmenovci) {
+                    jmenovec.checked = event.currentTarget.checked;
+                    }
+            });
+    }
+}
 
 /* Nasouchače událostem pro celý dokument */
 
@@ -976,19 +1002,8 @@ document.addEventListener("DOMContentLoaded", function(e) {
         aktualizujOdkazy();
         });
 
-    let list = document.getElementsByClassName("switch-input");
+    aktualizujSpojenePojizdniky();
 
-    /* synchronizace přepínačů se stejným ID na stránce evaluate */
-    for (let item of list) {
-
-        item.addEventListener('input', (event) => {
-                // přepneme tlačítka se stejným názvem
-                let jmenovci = document.getElementsByName(event.currentTarget.name);
-                for (let jmenovec of jmenovci) {
-                    jmenovec.checked = event.currentTarget.checked;
-                    }
-            });
-    }
 
     let tog = document.getElementById("toggle-rozbal");
     tog.addEventListener("click", function() {
@@ -1046,10 +1061,10 @@ function NormativeComplex(myoznaceni, myhypoteza, mydispozice, myekvivalence) {
             else znak = "⇑";
         }
 
-        obsazene_normy.add(this.oznaceni);
+        addOznaceni(this.oznaceni);
         console.log(obsazene_normy);
 
-        let ind = (indexofset(obsazene_normy,this.oznaceni)+1);
+        let ind = (indexofset(obsazene_normy,'oznaceni',this.oznaceni)+1);
 
         var vystup = "<h3>"+znak+" "+this.oznaceni+" (dále jen „N"+ind+"“)</h3>"+validityButton("N"+ind, false)+"\n\n";
 
@@ -1255,21 +1270,37 @@ function incrementLastEl (_array) {
 
 const obsazene_normy = new Set();
 
-function prehled_obsazenych_norem() {
-    let i=0;
-    let vystup = "<h2>Přehled obsažených normativních zdrojů</h2><dl>";
-    obsazene_normy.forEach( el => {
-        i++;
-        vystup += "<dt>N"+i+"</dt> <dd>"+el+"</dd>";
-    }
-
-    );
-    return vystup+"</dl>";
+function vzorec2citelny(vzorec) {
+    return vzorec.replace(/[&]{2}/g,'&').replace(/[|]{2}/g,'|').replace(/N\d+[-]/g,'').replace(/[!][(]/g,'¬(');
 }
 
-function indexofset(myset, member) {
-    let arr = Array.from(myset);
-    return arr.indexOf(member);
+function prehled_obsazenych_norem() {
+    let i=0;
+    let vystup = "<h2>Přehled struktury norem a normativních zdrojů</h2>";
+    obsazene_normy.forEach( el => {
+
+        let oznaceni = el.oznaceni;
+        i++;
+        vystup += "<h3>Norma N"+i+": "+oznaceni+"</h3>";
+        vystup += '<p class="vzorec">'+oznaceni+': '+vzorec2citelny(el.vzorec)+',</p>';
+
+        vystup += "<p>kde ";
+
+        for (let zkr in zkratky) {
+            if (oznaceni.indexOf(zkr)>=0) {
+                vystup += '<strong>'+zkr+'</strong> označuje '+zkratky[zkr];
+            }
+        }
+        vystup+=".</p>";
+
+        });
+
+    return vystup;
+}
+
+function indexofset(myset, field, value) {
+    // returns the member
+    return Array.from(myset).map( el => el[field] ).indexOf(value);
 }
 
 /* credit https://stackoverflow.com/questions/28790584/javascript-increment-last-array-element */
@@ -1312,9 +1343,11 @@ function rozpadNCdopromennych(normain,ind,...level ) {
         let children = normain['komplex'];
 
         children.forEach( child =>  {
-            let ind2 = (indexofset(obsazene_normy,child.oznaceni)+1);
+            let ind2 = (indexofset(obsazene_normy,'oznaceni',child.oznaceni)+1);
             tabulka_vazeb.push([normID(ind,...level),ind2]);
+            formLogic(child);
         });
+
 
         return rozpadNCdopromennych("dummy",ind,...level);
     }
@@ -1340,6 +1373,57 @@ function vzorecEvaluateNorm(vzorec) {
     return vzorec;
 }
 
+function aktualizujButton(ind) {
+    // funkce aktualizuje button normy id, zajistí odpovídající aktualizaci provazby na navazující normu a dále aktualizuje Button rekurzí této navazující normy, pokud taková existuje
+    console.log(ind);
+    /* kontrola vstupních parametrů */
+
+    /*
+    if (!Number.isInteger(ind) ||
+        ind < 1 ||
+        ind > (Array.from(obsazene_normy).length) )
+        console.error("Id normy nesplňuje požadované parametry.");
+        */
+    /* najdeme daný button */
+
+    let button = document.getElementById("BN"+ind);
+    let vzorec = vzorecEvaluateNorm(Array.from(obsazene_normy)[ind-1].vzorec);
+
+    let hodnota_chain = eval(vzorec);
+    //console.log(vzorec);
+    //console.log(hodnota_chain);
+
+    let hodnota_button = false;
+    if (button.classList.contains("success")) hodnota_button=true;
+
+    if (hodnota_button!=hodnota_chain) {
+        toggleButton(button);
+        // provedeme příslušné změny přepínače navazující normy na vazebném místě, pokud je to potřebné
+
+        if (hodnota_button == false) { // původní hodnota byla false, nyní je nově true, pokud je button true, musí být navázané pole rovněž true (jde o implikaci, která nepřipouští 1 => 0).
+            let vysl = [];
+            let nutnost_aktualizace = new Set();
+            tabulka_vazeb.forEach( vazba => {
+                if (vazba[1]==ind) {
+                    let pojizdnik = document.getElementById(vazba[0].replace(/[/]/g,'-'));
+                    pojizdnik.checked = true;
+                    nutnost_aktualizace.add(vazba[0].replace(/N(\d+)[/].+/g,'$1'));
+                    console.log(vazba[0]);
+                    }
+                });
+            // nyní aktualizujeme i příslušný button
+            nutnost_aktualizace.forEach( number => aktualizujButton(number) );
+            }
+        }
+    }
+
+function addOznaceni(myoznaceni) {
+
+    if (!Array.from(obsazene_normy).map( x => x.oznaceni).includes(myoznaceni)) {
+        obsazene_normy.add({oznaceni: myoznaceni});
+    }
+}
+
 function formLogic(normain) {
     // na zadaném normativním komplexu vytvoří řetězce s logickými objekty, které lze vyhodnotit pomocí funkcí eval; výstupem je tedy tabulka evaluovaných výrazů
     // N1   řetězec k evaluaci
@@ -1350,34 +1434,108 @@ function formLogic(normain) {
     if ( (normain instanceof NormativeComplex) == true ) {
 
         // najdeme číslo normy
-        let ind = (indexofset(obsazene_normy,normain.oznaceni)+1);
+        let ind = (indexofset(obsazene_normy,'oznaceni',normain.oznaceni)+1);
 
         // vytvoříme objekt - vlastně stejně jako print, akorát komplexy uložíme vazbu a zapomeneme a provedeme substituci
         let logickyObjekt = rozpadNCdopromennych(normain.vzorec.hypoteza, ind);
         myLog("výstup", logickyObjekt);
-        let vzorec = vzorec2text(logickyObjekt);
-        vzorec = vzorec.replace(/([&|])/g,' $1$1 ').replace(/[/]/g,'-').replace(/NOT/g,' !').replace(/\s+/g,' ');
+        let vzorec_citelny = vzorec2text(logickyObjekt);
+
+        vzorec = vzorec_citelny.replace(/([&|])/g,' $1$1 ').replace(/[/]/g,'-').replace(/NOT/g,' !').replace(/\s+/g,' ');
+
+        // uložíme vzorec do naší tabulky
+
+        obsazene_normy.forEach(
+            el => {
+                if (el.oznaceni == normain.oznaceni)
+                    el.vzorec = vzorec;
+                });
+
+        /* V1
+
         vzorec = vzorecEvaluateNorm(vzorec);
 
         let list = document.getElementsByClassName("switch-input");
 
-        /* synchronizace přepínačů se stejným ID na stránce evaluate */
+        for (let item of list) {
+             item.addEventListener('input', (event) => {
+                 // aktualizujeme logickou hodnotu buttonku
+                 console.log("Jsem tu");
+                 let button = document.getElementById("BN"+ind);
+                 let hodnota_chain = eval(vzorec);
+
+                 let hodnota_button = false;
+                 if (button.classList.contains("success")) hodnota_button=true;
+
+                 if (hodnota_button!=hodnota_chain) {
+                     toggleButton(button);
+                     }
+                 });
+             }
+
+                */
+
+        /* V2 synchronizace přepínačů se stejným ID na stránce evaluate */
+        let list = document.getElementsByClassName('switch-input N'+ind);
 
         for (let item of list) {
-
-            item.addEventListener('input', (event) => {
-                    // aktualizujeme logickou hodnotu buttonku
-                    let button = document.getElementById("BN"+ind);
-                    let hodnota_chain = eval(vzorec);
-
-                    let hodnota_button = false;
-                    if (button.classList.contains("success")) hodnota_button=true;
-
-                    if (hodnota_button!=hodnota_chain) {
-                        toggleButton(button);
-                        }
-                    });
-        }
+            item.addEventListener('input', event => aktualizujButton(ind) );
+            }
+        return vzorec_citelny;
     }
     else console.error("Vstup není normativní komplex.");
+}
+
+function textAreaInput() {
+    let vystup = "<h1>Zadání vstupních dat</h1>";
+
+    vystup += 'Zadejte prosím do níže uvedeného pole vstupní data - soubor norem, který chcete modelovat. <div id="resultreport"></div>';
+
+    vystup += '<div class="float-right" style="width:150px"><button id="aktualizacekodu" type="button" class="button success" style="width:140px"><strong><i class="fi-refresh"></i> Aktualizovat</strong></button></div>';
+
+
+    vystup += '<textarea id="textareabox" rows="30" name="textarea1" placeholder="Start here..."></textarea>';
+
+    return vystup;
+
+}
+
+function resetInput() {
+    // vymaže veškeré vstupy v rámci proměnné myinput
+    zkratky = undefined;
+    hlavni_dispozice = undefined;
+    seznam_dispozic = undefined;
+
+    var NormObjects = undefined;
+    // Pole se seznamem všech objektů typu Norma
+    for(var key in window) {
+        var value = window[key];
+        if (value instanceof Norma) {
+            // foo instance found in the global scope, named by key
+            // console.log(JSON.stringify(value));
+
+            value=undefined;
+        }
+    }
+}
+
+mynewinput = "";
+
+function poslechAktualizaciTextArea() {
+    let button = document.getElementById("aktualizacekodu");
+    button.addEventListener("click", event => {
+        resetInput();
+        let success = true;
+        try {
+            mynewinput = document.getElementById("textareabox").value;
+            window.eval(mynewinput);
+            }
+        catch (exception_var)  {
+            document.getElementById('resultreport').innerHTML='<div class="callout alert"><strong>Chyba!</strong> Aktualizace kódu proběhla neúspěšně: '+ exception_var+'</div>';
+            success = false;
+        }
+        if (success) {
+            document.getElementById('resultreport').innerHTML='<div class="callout success"><strong>Úspěch!</strong> Aktualizace kódu proběhla úspěšně.</div>';
+        }
+    });
 }

@@ -14,9 +14,13 @@ input:checked ~ .switch-paddle {
     background: #3adb76;
 }
 
-
+.grid-container {
+    max-width: 60rem;
+}
 
 ol li {list-style-type: decimal; padding-top:20px}
+
+p.vzorec {padding: 10px 100px;}
 
 h3::before {
   content: "";
